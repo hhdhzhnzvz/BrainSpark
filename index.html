@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BrainSpark | Code Breaker</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&family=Playfair+Display:wght@500;600&display=swap');
+
+        :root {
+            --cream: #FFF9F0;
+            --beige: #F5E6D8;
+            --light-brown: #E8D5C0;
+            --gold: #D4AF37;
+            --coffee: #A68A64;
+            --text: #3A3226;
+            --shadow: rgba(58, 50, 38, 0.1);
+            --card-bg: rgba(255, 249, 240, 0.85);
+            --correct: #A5D6A7;
+            --partial: #FFE082;
+            --incorrect: #EF9A9A;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--cream);
+            color: var(--text);
+            font-family: 'Montserrat', sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+        }
+
+        /* Элегантный фон с пузырями */
+        .bubbles-bg {
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+            z-index: -1;
+            background: linear-gradient(135deg, var(--beige), var(--cream));
+            overflow: hidden;
+        }
+
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(212, 175, 55, 0.08);
+            backdrop-filter: blur(2px);
+            animation: float 15s infinite linear;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10% { opacity: 0.5; }
+            90% { opacity: 0.5; }
+            100% { transform: translateY(-1000px) rotate(720deg); opacity: 0; }
+        }
+
+        /* Основные стили */
+        header {
+            padding: 2rem 1rem 1rem;
+            text-align: center;
+            background: linear-gradient(to bottom, var(--cream), transparent);
+            position: relative;
+        }
+
+        .logo {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            font-weight: 600;
+            color: var(--coffee);
+            margin-bottom: 0.5rem;
+            position: relative;
+            display: inline-block;
+        }
+
+        .logo::after {
+            content: '';
+            position: absolute;
+            bottom: 5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        .game-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 2rem;
+            color: var(--coffee);
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .game-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        .game-board {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 8px 25px var(--shadow);
+            margin-bottom: 2rem;
+        }
+
+        /* Стили для игры Code Breaker */
+        .code-container {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 2rem;
+        }
+
+        .code-slot {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--beige);
+            border: 2px solid var(--light-brown);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--text);
+        }
+
+        .code-slot.filled {
+            background-color: var(--gold);
+            color: white;
+        }
+
+        .guesses-container {
+            margin-bottom: 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .guess-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 5px;
+            width: fit-content;
+        }
+
+        .guess-peg {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background-color: var(--beige);
+            border: 1px solid var(--light-brown);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--text);
+        }
+
+        .feedback-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-bottom: 15px;
+            width: fit-content;
+            max-width: 150px;
+            justify-content: center;
+        }
+
+        .feedback-peg {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--light-brown);
+        }
+
+        .feedback-peg.correct {
+            background-color: var(--correct);
+        }
+
+        .feedback-peg.partial {
+            background-color: var(--partial);
+        }
+
+        .feedback-peg.incorrect {
+            background-color: var(--incorrect);
+        }
+
+        .number-selector {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 1.5rem;
+        }
+
+        .number-btn {
+            aspect-ratio: 1;
+            border-radius: 50%;
+            background-color: var(--beige);
+            border: none;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--text);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .number-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 3px 6px var(--shadow);
+        }
+
+        .control-btn {
+            padding: 0.8rem 1.5rem;
+            border: none;
+            border-radius: 50px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .submit-btn {
+            background: linear-gradient(to right, var(--gold), var(--coffee));
+            color: white;
+            box-shadow: 0 3px 10px rgba(212, 175, 55, 0.3);
+            margin-right: 1rem;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(212, 175, 55, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .new-game-btn {
+            background: var(--beige);
+            color: var(--coffee);
+        }
+
+        .new-game-btn:hover {
+            background: var(--light-brown);
+        }
+
+        .game-controls {
+            display: flex;
+            justify-content: center;
+            margin-top: 1.5rem;
+        }
+
+        .difficulty-selector {
+            margin-top: 1.5rem;
+            text-align: center;
+        }
+
+        .difficulty-btn {
+            padding: 0.5rem 1rem;
+            margin: 0 0.3rem;
+            border: 1px solid var(--light-brown);
+            border-radius: 50px;
+            background: transparent;
+            color: var(--coffee);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .difficulty-btn.active {
+            background: var(--gold);
+            color: white;
+            border-color: var(--gold);
+        }
+
+        .difficulty-btn:hover {
+            border-color: var(--gold);
+        }
+
+        .game-info {
+            max-width: 800px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background: var(--card-bg);
+            border-radius: 16px;
+            box-shadow: 0 8px 25px var(--shadow);
+        }
+
+        .game-description {
+            margin-bottom: 1.5rem;
+            line-height: 1.7;
+        }
+
+        .game-stats {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1.5rem;
+            font-size: 0.9rem;
+            color: var(--coffee);
+        }
+
+        .stat {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .stat i {
+            color: var(--gold);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            background: linear-gradient(to top, var(--beige), transparent);
+            margin-top: 3rem;
+            position: relative;
+        }
+
+        footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
+
+        /* Анимации */
+        @keyframes successPulse {
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0.4); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 15px rgba(212, 175, 55, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(212, 175, 55, 0); }
+        }
+
+        .success-animation {
+            animation: successPulse 0.6s ease-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+            20%, 40%, 60%, 80% { transform: translateX(5px); }
+        }
+
+        .shake-animation {
+            animation: shake 0.5s;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .logo {
+                font-size: 2rem;
+            }
+            
+            .game-title {
+                font-size: 1.5rem;
+            }
+            
+            .game-container {
+                padding: 1rem;
+            }
+            
+            .game-board {
+                padding: 1.5rem;
+            }
+            
+            .code-slot {
+                width: 40px;
+                height: 40px;
+                font-size: 1.2rem;
+            }
+            
+            .guess-peg {
+                width: 25px;
+                height: 25px;
+            }
+            
+            .number-selector {
+                grid-template-columns: repeat(5, 1fr);
+                gap: 8px;
+            }
+            
+            .game-controls {
+                flex-direction: column;
+                align-items: center;
+                gap: 0.8rem;
+            }
+            
+            .submit-btn {
+                margin-right: 0;
+                margin-bottom: 0.5rem;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Фон с пузырями -->
+    <div class="bubbles-bg" id="bubblesBg"></div>
+
+    <header>
+        <div class="logo">BrainSpark</div>
+        <h1 class="game-title">Code Breaker</h1>
+    </header>
+
+    <div class="game-container">
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" data-difficulty="4">4 цифры</button>
+            <button class="difficulty-btn" data-difficulty="5">5 цифр</button>
+            <button class="difficulty-btn" data-difficulty="6">6 цифр</button>
+        </div>
+
+        <div class="game-board">
+            <div class="code-container" id="codeContainer"></div>
+            
+            <div class="guesses-container" id="guessesContainer"></div>
+            
+            <div class="number-selector">
+                <button class="number-btn" data-number="1">1</button>
+                <button class="number-btn" data-number="2">2</button>
+                <button class="number-btn" data-number="3">3</button>
+                <button class="number-btn" data-number="4">4</button>
+                <button class="number-btn" data-number="5">5</button>
+                <button class="number-btn" data-number="6">6</button>
+                <button class="number-btn" data-number="7">7</button>
+                <button class="number-btn" data-number="8">8</button>
+                <button class="number-btn" data-number="9">9</button>
+                <button class="number-btn" data-number="0">0</button>
+            </div>
+            
+            <div class="game-controls">
+                <button class="control-btn submit-btn" id="submitBtn" disabled>Проверить</button>
+                <button class="control-btn new-game-btn" id="newGameBtn">Новая игра</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-info">
+        <h2 style="font-family: 'Playfair Display', serif; color: var(--coffee); margin-bottom: 1rem;">Описание игры</h2>
+        <div class="game-description">
+            <p>Угадайте секретный код, используя логику и подсказки о правильности ваших предположений. После каждой попытки вы получите обратную связь:</p>
+            <ul style="margin: 1rem 0; padding-left: 1.5rem;">
+                <li><span style="color: var(--correct);">Зеленый</span> - цифра есть в коде и стоит на правильном месте</li>
+                <li><span style="color: var(--partial);">Желтый</span> - цифра есть в коде, но стоит не на своем месте</li>
+                <li><span style="color: var(--incorrect);">Красный</span> - цифры нет в коде</li>
+            </ul>
+            <p>Используйте дедукцию, чтобы определить правильную комбинацию за минимальное число попыток!</p>
+        </div>
+        
+        <div class="game-stats">
+            <div class="stat"><i class="fas fa-clock"></i> 4-12 мин/день</div>
+            <div class="stat"><i class="fas fa-chart-line"></i> Средняя сложность</div>
+            <div class="stat"><i class="fas fa-brain"></i> Логика & Дедукция</div>
+        </div>
+        
+        <p style="margin-top: 1.5rem; font-style: italic; color: var(--coffee);">
+            <strong>Применение в жизни:</strong> Улучшает дедуктивное мышление и способность анализировать информацию, исключая неправильные варианты.
+        </p>
+    </div>
+
+    <footer>
+        <p>© 2023 BrainSpark | Разработано <a href="https://t.me/porofite" style="color: var(--coffee); text-decoration: none; font-weight: 600;">Porofite Games</a></p>
+        <p>Тренируйтесь с удовольствием и видите прогресс каждый день!</p>
+    </footer>
+
+    <script>
+        // Создаем пузыри на фоне
+        function createBubbles() {
+            const bubblesBg = document.getElementById('bubblesBg');
+            const bubbleCount = window.innerWidth < 768 ? 20 : 40;
+            
+            for (let i = 0; i < bubbleCount; i++) {
+                const bubble = document.createElement('div');
+                bubble.classList.add('bubble');
+                
+                const size = Math.random() * 60 + 20;
+                const posX = Math.random() * 100;
+                const delay = Math.random() * 15;
+                const duration = Math.random() * 15 + 10;
+                
+                bubble.style.width = `${size}px`;
+                bubble.style.height = `${size}px`;
+                bubble.style.left = `${posX}%`;
+                bubble.style.bottom = `-${size}px`;
+                bubble.style.animationDelay = `${delay}s`;
+                bubble.style.animationDuration = `${duration}s`;
+                
+                bubblesBg.appendChild(bubble);
+            }
+        }
+
+        // Логика игры Code Breaker
+        document.addEventListener('DOMContentLoaded', function() {
+            createBubbles();
+            
+            const codeContainer = document.getElementById('codeContainer');
+            const guessesContainer = document.getElementById('guessesContainer');
+            const submitBtn = document.getElementById('submitBtn');
+            const newGameBtn = document.getElementById('newGameBtn');
+            const numberBtns = document.querySelectorAll('.number-btn');
+            const difficultyBtns = document.querySelectorAll('.difficulty-btn');
+            
+            let codeLength = 4;
+            let secretCode = [];
+            let currentGuess = [];
+            let guesses = [];
+            let gameOver = false;
+            
+            // Инициализация игры
+            function initGame() {
+                // Генерируем случайный код
+                secretCode = generateSecretCode(codeLength);
+                console.log("Секретный код:", secretCode.join('')); // Для отладки
+                
+                // Очищаем контейнеры
+                codeContainer.innerHTML = '';
+                guessesContainer.innerHTML = '';
+                
+                // Создаем слоты для текущей догадки
+                for (let i = 0; i < codeLength; i++) {
+                    const slot = document.createElement('div');
+                    slot.classList.add('code-slot');
+                    slot.dataset.index = i;
+                    slot.addEventListener('click', function() {
+                        if (gameOver) return;
+                        clearSlot(this);
+                    });
+                    codeContainer.appendChild(slot);
+                }
+                
+                currentGuess = Array(codeLength).fill(null);
+                guesses = [];
+                gameOver = false;
+                
+                // Обновляем состояние кнопки отправки
+                updateSubmitButton();
+            }
+            
+            // Генерация секретного кода
+            function generateSecretCode(length) {
+                const code = [];
+                for (let i = 0; i < length; i++) {
+                    code.push(Math.floor(Math.random() * 10));
+                }
+                return code;
+            }
+            
+            // Очистка слота
+            function clearSlot(slot) {
+                const index = parseInt(slot.dataset.index);
+                if (currentGuess[index] !== null) {
+                    currentGuess[index] = null;
+                    slot.textContent = '';
+                    slot.classList.remove('filled');
+                    updateSubmitButton();
+                }
+            }
+            
+            // Обновление состояния кнопки отправки
+            function updateSubmitButton() {
+                const isComplete = currentGuess.every(val => val !== null);
+                submitBtn.disabled = !isComplete;
+            }
+            
+            // Проверка догадки
+            function checkGuess() {
+                if (gameOver) return;
+                
+                // Создаем копии для проверки
+                const secretCodeCopy = [...secretCode];
+                const guessCopy = [...currentGuess];
+                const feedback = [];
+                
+                // 1. Сначала проверяем точные совпадения (правильные цифры на правильных местах)
+                for (let i = 0; i < codeLength; i++) {
+                    if (guessCopy[i] === secretCodeCopy[i]) {
+                        feedback.push('correct');
+                        secretCodeCopy[i] = null; // Помечаем как проверенную
+                        guessCopy[i] = -1; // Помечаем как проверенную
+                    }
+                }
+                
+                // 2. Затем проверяем частичные совпадения (правильные цифры на неправильных местах)
+                for (let i = 0; i < codeLength; i++) {
+                    if (guessCopy[i] !== -1) {
+                        const foundIndex = secretCodeCopy.indexOf(guessCopy[i]);
+                        if (foundIndex !== -1) {
+                            feedback.push('partial');
+                            secretCodeCopy[foundIndex] = null; // Помечаем как проверенную
+                        } else {
+                            feedback.push('incorrect');
+                        }
+                    }
+                }
+                
+                // Добавляем догадку в историю
+                addGuessToHistory(currentGuess, feedback);
+                
+                // Проверяем победу
+                const isWin = currentGuess.every((val, i) => val === secretCode[i]);
+                
+                if (isWin) {
+                    gameOver = true;
+                    revealSecretCode();
+                    setTimeout(function() {
+                        alert(`Поздравляем! Вы взломали код за ${guesses.length} попыток!`);
+                        codeContainer.classList.add('success-animation');
+                        setTimeout(function() {
+                            codeContainer.classList.remove('success-animation');
+                        }, 600);
+                    }, 100);
+                } else if (guesses.length >= 10) {
+                    gameOver = true;
+                    revealSecretCode();
+                    setTimeout(function() {
+                        alert(`Игра окончена! Секретный код: ${secretCode.join('')}`);
+                    }, 100);
+                }
+                
+                // Сбрасываем текущую догадку
+                currentGuess = Array(codeLength).fill(null);
+                const slots = document.querySelectorAll('.code-slot');
+                slots.forEach(slot => {
+                    slot.textContent = '';
+                    slot.classList.remove('filled');
+                });
+                
+                updateSubmitButton();
+            }
+            
+            // Добавление догадки в историю
+            function addGuessToHistory(guess, feedback) {
+                guesses.push({ guess: [...guess], feedback: [...feedback] });
+                
+                const guessRow = document.createElement('div');
+                guessRow.classList.add('guess-row');
+                
+                const feedbackRow = document.createElement('div');
+                feedbackRow.classList.add('feedback-row');
+                
+                // Создаем элементы для догадки
+                guess.forEach(num => {
+                    const peg = document.createElement('div');
+                    peg.classList.add('guess-peg');
+                    peg.textContent = num;
+                    guessRow.appendChild(peg);
+                });
+                
+                // Создаем элементы для обратной связи
+                feedback.forEach(type => {
+                    const peg = document.createElement('div');
+                    peg.classList.add('feedback-peg', type);
+                    feedbackRow.appendChild(peg);
+                });
+                
+                // Добавляем в контейнер
+                guessesContainer.appendChild(guessRow);
+                guessesContainer.appendChild(feedbackRow);
+            }
+            
+            // Показать секретный код
+            function revealSecretCode() {
+                const slots = document.querySelectorAll('.code-slot');
+                slots.forEach((slot, i) => {
+                    slot.textContent = secretCode[i];
+                    slot.classList.add('filled');
+                });
+            }
+            
+            // Обработчики событий
+            numberBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    if (gameOver) return;
+                    
+                    // Находим первый пустой слот
+                    const emptySlotIndex = currentGuess.indexOf(null);
+                    if (emptySlotIndex !== -1) {
+                        const number = parseInt(this.dataset.number);
+                        currentGuess[emptySlotIndex] = number;
+                        
+                        const slot = document.querySelector(`.code-slot[data-index="${emptySlotIndex}"]`);
+                        slot.textContent = number;
+                        slot.classList.add('filled');
+                        
+                        updateSubmitButton();
+                    }
+                });
+            });
+            
+            submitBtn.addEventListener('click', checkGuess);
+            newGameBtn.addEventListener('click', initGame);
+            
+            difficultyBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    difficultyBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    codeLength = parseInt(this.dataset.difficulty);
+                    initGame();
+                });
+            });
+            
+            // Инициализация игры при загрузке
+            initGame();
+            
+            // Адаптация к изменению размера экрана
+            window.addEventListener('resize', function() {
+                document.querySelectorAll('.bubble').forEach(bubble => bubble.remove());
+                createBubbles();
+            });
+        });
+    </script>
+</body>
+</html>
